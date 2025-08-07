@@ -1,73 +1,73 @@
- # app.py (Versão Final com Cabeçalho Escuro)
+ # app.py (Versão final com função de carregamento original)
 
 import streamlit as st
 import pandas as pd
 import plotly.express as px
 import base64
-from streamlit_option_menu import option_menu
 
-# --- CONFIGURAÇÃO INICIAL E ESTILOS ---
-
+# --- CONFIGURAÇÃO INICIAL DA PÁGINA ---
 st.set_page_config(
     page_title="Dashboard Sistema de Bibliotecas",
     page_icon="🎓",
     layout="wide"
 )
 
-# CSS para customizações visuais
+# --- CSS PARA ESTILIZAÇÃO PROFISSIONAL ---
 def load_css():
     st.markdown("""
     <style>
-        .main .block-container { 
-            padding-top: 2rem; 
+        .main .block-container {
+            padding-top: 1rem;
             padding-bottom: 2rem;
         }
-        
-        /* --- ALTERADO: Cabeçalho com fundo escuro --- */
-        .main-header {
-            background-color: #012F6C; /* A cor escura aplicada apenas aqui */
+        body, .main, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {
+            background-color: #111827;
+            color: #E5E7EB;
+        }
+        [data-testid="stSidebar"] {
+            background-color: #1F2937;
+            border-right: 1px solid #374151;
+        }
+        [data-testid="stSidebar"] .st-emotion-cache-1b0udgb, [data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3 {
+             color: #FFFFFF;
+        }
+        .card-container {
+            background-color: #1F2937;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid #374151;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+        }
+        .kpi-card {
+            background-color: #1F2937;
+            border-radius: 12px;
             padding: 1rem;
-            border-radius: 10px;
-            margin-bottom: 2rem;
+            border: 1px solid #374151;
             display: flex;
-            justify-content: space-between;
-            align-items: center;
+            flex-direction: column;
+            justify-content: center;
+            height: 100%;
         }
-        .main-header .logo { 
-            height: 60px;
+        .kpi-card h3 {
+            font-size: 1rem;
+            color: #9CA3AF;
+            font-weight: 600;
+            margin: 0;
+        }
+        .kpi-card h2 {
+            font-size: 2.25rem;
+            color: #FFFFFF;
+            font-weight: 700;
+            margin: 0;
+        }
+        .logo-img {
+            height: 45px;
             object-fit: contain;
-        }
-        /* Cor do título dentro do header alterada para branco */
-        .main-header .title { 
-            font-size: 2.2rem; 
-            font-weight: bold; 
-            color: #FFFFFF; 
-            text-align: center; 
-        }
-
-        /* Cartões de Métrica (KPIs) voltaram ao tema claro */
-        .metric-card {
-            background-color: #F8F9FA; 
-            padding: 1.5rem; 
-            border-radius: 10px;
-            border-left: 6px solid #1f4e79; 
-            margin-bottom: 1rem;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-            transition: transform 0.2s ease-in-out;
-        }
-        .metric-card:hover {
-            transform: scale(1.03);
-        }
-        .metric-card h3 { 
-            font-size: 1.1rem; 
-            color: #6c757d;
-            margin-bottom: 0.5rem;
-            font-weight: 500;
-        }
-        .metric-card h2 { 
-            font-size: 2.5rem; 
-            color: #1f4e79; 
-            font-weight: bold; 
+            background-color: #FFFFFF;
+            border-radius: 8px;
+            padding: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.5);
         }
     </style>
     """, unsafe_allow_html=True)
@@ -83,9 +83,9 @@ def get_base64_of_bin_file(bin_file):
             data = f.read()
         return base64.b64encode(data).decode()
     except FileNotFoundError:
-        st.warning(f"Arquivo de imagem não encontrado: {bin_file}")
         return ""
 
+# --- ALTERAÇÃO AQUI: De volta à sua função original ---
 @st.cache_data
 def load_data():
     try:
@@ -93,144 +93,164 @@ def load_data():
         df = pd.read_excel(file_path, header=3)
         df.dropna(subset=['Unidade', 'Curso', 'Titulo do Livro'], inplace=True)
         df['Total'] = pd.to_numeric(df['Total'], errors='coerce').fillna(0).astype(int)
+        df = df[df['Total'] > 0] # Mantendo esta limpeza para gráficos melhores
         return df
     except FileNotFoundError:
-        st.error(f"Erro: O arquivo '{file_path}' não foi encontrado.")
-        return pd.DataFrame()
+        st.error(f"Ficheiro de dados '{file_path}' não encontrado!", icon="🚨")
+        st.warning("""
+        **Por favor, certifique-se de que o ficheiro `planilha_lyceum_e_minha_biblioteca.xlsx` está na mesma pasta que o seu script `app.py`.**
+        """)
+        return None
     except Exception as e:
         st.error(f"Erro ao carregar os dados: {e}")
-        return pd.DataFrame()
+        return None
 
-# --- FUNÇÕES DE CONTEÚDO ---
+# --- CARREGAMENTO INICIAL DOS DADOS ---
+df = load_data()
 
-def render_visao_geral(df_filtrado):
-    st.subheader("Visão Geral (Unidade e Curso)")
-
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        st.markdown(f"""<div class="metric-card"><h3>📚 Total de Livros</h3><h2>{df_filtrado['Titulo do Livro'].nunique()}</h2></div>""", unsafe_allow_html=True)
-    with col2:
-        st.markdown(f"""<div class="metric-card"><h3>👁️ Total de Visualizações</h3><h2>{df_filtrado['Total'].sum():,}</h2></div>""", unsafe_allow_html=True)
-    with col3:
-        st.markdown(f"""<div class="metric-card"><h3>🏫 Unidades</h3><h2>{df_filtrado['Unidade'].nunique()}</h2></div>""", unsafe_allow_html=True)
-    with col4:
-        st.markdown(f"""<div class="metric-card"><h3>🎓 Cursos</h3><h2>{df_filtrado['Curso'].nunique()}</h2></div>""", unsafe_allow_html=True)
-
-    st.markdown("---")
-
-    col_graf_1, col_graf_2 = st.columns(2)
-    with col_graf_1:
-        st.subheader("📊 Visualizações por Unidade", divider='blue')
-        df_unidade = df_filtrado.groupby('Unidade')['Total'].sum().nlargest(10).reset_index()
-        fig_unidade = px.bar(df_unidade, x='Total', y='Unidade', orientation='h', text='Total', title="Top 10 Unidades")
-        # --- ALTERADO: Removido tema escuro do gráfico ---
-        fig_unidade.update_layout(yaxis={'categoryorder':'total ascending'}, yaxis_title=None, xaxis_title="Total de Visualizações", height=400)
-        st.plotly_chart(fig_unidade, use_container_width=True)
-        
-    with col_graf_2:
-        st.subheader("🎯 Visualizações por Curso", divider='blue')
-        df_curso = df_filtrado.groupby('Curso')['Total'].sum().nlargest(10).reset_index()
-        fig_curso = px.pie(df_curso, values='Total', names='Curso', title="Top 10 Cursos", hole=0.4)
-        # --- ALTERADO: Removido tema escuro do gráfico ---
-        fig_curso.update_layout(height=400, legend_title_text='Cursos')
-        st.plotly_chart(fig_curso, use_container_width=True)
-
+# --- LAYOUT DA BARRA LATERAL (SIDEBAR) ---
+with st.sidebar:
+    st.title("Dashboard de Bibliotecas")
     st.markdown("---")
     
-    st.subheader("📖 Análise dos Livros Mais Visualizados", divider='blue')
-    top_n = st.number_input("Selecione o número de livros para exibir:", min_value=5, max_value=50, value=20, step=5)
-    
-    df_livros = df_filtrado.groupby(['Titulo do Livro', 'Curso', 'Unidade'])['Total'].sum().nlargest(top_n).reset_index()
-    fig_livros = px.bar(df_livros, x='Total', y='Titulo do Livro', orientation='h', color='Total', hover_data=['Curso', 'Unidade'])
-    # --- ALTERADO: Removido tema escuro do gráfico ---
-    fig_livros.update_layout(
-        height=25 * top_n, 
-        yaxis={'categoryorder':'total ascending'}, 
-        yaxis_title=None, 
-        xaxis_title="Total de Visualizações",
-        title=f"Top {top_n} Livros Mais Visualizados"
+    selected_page = st.radio(
+        "Navegação",
+        ["Minha Biblioteca", "Pergamum", "Repositório Institucional"],
+        captions=["Análise de acessos", "Em breve", "Em breve"]
     )
-    st.plotly_chart(fig_livros, use_container_width=True)
+    st.markdown("---")
 
-    st.subheader("📋 Dados Detalhados", divider='blue')
-    st.dataframe(df_filtrado.sort_values('Total', ascending=False), use_container_width=True, height=400)
-    
-    csv = df_filtrado.to_csv(index=False).encode('utf-8')
-    st.download_button("📥 Baixar dados filtrados (CSV)", csv, "dados_biblioteca_filtrados.csv", "text/csv", use_container_width=True, type="primary")
+    df_filtrado = None
+    if df is not None and selected_page == "Minha Biblioteca":
+        st.header("🔍 Filtros Interativos")
+        unidades = ['Todas'] + sorted(df['Unidade'].unique().tolist())
+        unidade_selecionada = st.selectbox("Selecione a Unidade:", unidades)
+        
+        if unidade_selecionada != 'Todas':
+            cursos_filtrados = df[df['Unidade'] == unidade_selecionada]['Curso'].unique()
+        else:
+            cursos_filtrados = df['Curso'].unique()
+        
+        cursos = ['Todos'] + sorted(cursos_filtrados.tolist())
+        curso_selecionado = st.selectbox("Selecione o Curso:", cursos)
+        
+        termo_busca = st.text_input("Buscar por Título do Livro:", placeholder="Ex: Anatomia Humana")
+        
+        if not df.empty:
+            min_views = st.slider(
+                "Filtrar por nº mínimo de visualizações:", 
+                min_value=0, 
+                max_value=int(df['Total'].max()), 
+                value=0,
+                step=10
+            )
+        else:
+            min_views = 0
+        
+        # --- LÓGICA DE FILTRAGEM ---
+        df_filtrado = df.copy()
+        if unidade_selecionada != 'Todas':
+            df_filtrado = df_filtrado[df_filtrado['Unidade'] == unidade_selecionada]
+        if curso_selecionado != 'Todos':
+            df_filtrado = df_filtrado[df_filtrado['Curso'] == curso_selecionado]
+        if termo_busca:
+            df_filtrado = df_filtrado[df_filtrado['Titulo do Livro'].str.contains(termo_busca, case=False, na=False)]
+        if min_views > 0:
+            df_filtrado = df_filtrado[df_filtrado['Total'] >= min_views]
 
-def render_minha_biblioteca():
-    df = load_data()
-    if df.empty: return
+# --- RENDERIZAÇÃO DA PÁGINA PRINCIPAL ---
 
-    st.sidebar.header("🔍 Filtros Interativos")
-    unidades = ['Todas'] + sorted(df['Unidade'].unique().tolist())
-    unidade_selecionada = st.sidebar.selectbox("Unidade:", unidades)
-    
-    if unidade_selecionada != 'Todas': cursos_filtrados = df[df['Unidade'] == unidade_selecionada]['Curso'].unique()
-    else: cursos_filtrados = df['Curso'].unique()
-    cursos = ['Todos'] + sorted(cursos_filtrados.tolist())
-    curso_selecionado = st.sidebar.selectbox("Curso:", cursos)
-    
-    termo_busca = st.sidebar.text_input("Buscar Título do Livro:", placeholder="Ex: Anatomia")
-    min_views = st.sidebar.slider("Nº Mínimo de Visualizações:", 0, int(df['Total'].max()), 0, 10)
-
-    df_filtrado = df.copy()
-    if unidade_selecionada != 'Todas': df_filtrado = df_filtrado[df_filtrado['Unidade'] == unidade_selecionada]
-    if curso_selecionado != 'Todos': df_filtrado = df_filtrado[df_filtrado['Curso'] == curso_selecionado]
-    if termo_busca: df_filtrado = df_filtrado[df_filtrado['Titulo do Livro'].str.contains(termo_busca, case=False, na=False)]
-    if min_views > 0: df_filtrado = df_filtrado[df_filtrado['Total'] >= min_views]
-    
-    if df_filtrado.empty:
-        st.warning("Nenhum dado encontrado com os filtros aplicados.")
-    else:
-        tab_geral, tab_aluno, tab_professor = st.tabs(["Visão Geral", "Análise por Aluno", "Análise por Professor"])
-        with tab_geral: render_visao_geral(df_filtrado)
-        with tab_aluno: st.info("🚧 Funcionalidade em desenvolvimento.")
-        with tab_professor: st.info("🚧 Funcionalidade em desenvolvimento.")
-
-def render_pergamum():
-    st.header("🏛️ Análise de Dados - Pergamum")
-    st.warning("Página em construção.", icon="🚧")
-
-def render_repositorio():
-    st.header("📂 Análise de Dados - Repositório Institucional")
-    st.warning("Página em construção.", icon="🚧")
-
-# --- LAYOUT PRINCIPAL DA APLICAÇÃO ---
+# Cabeçalho com Logos
 logo1_b64 = get_base64_of_bin_file("image.png")
 logo2_b64 = get_base64_of_bin_file("logo.png")
 logo3_b64 = get_base64_of_bin_file("UNEX-LOGO.png")
 
-st.markdown(f"""
-<div class="main-header">
-    <img src="data:image/png;base64,{logo1_b64}" class="logo">
-    <div class="title">Dashboard Sistema de Bibliotecas</div>
-    <img src="data:image/png;base64,{logo2_b64}" class="logo">
-    <img src="data:image/png;base64,{logo3_b64}" class="logo">
-</div>
-""", unsafe_allow_html=True)
+col_title, col_logo1, col_logo2, col_logo3 = st.columns([0.55, 0.15, 0.15, 0.15])
+with col_title:
+    st.header(f"Análise de Dados: {selected_page}")
+with col_logo1:
+    if logo1_b64:
+        st.markdown(f'<img src="data:image/png;base64,{logo1_b64}" class="logo-img">', unsafe_allow_html=True)
+with col_logo2:
+    if logo2_b64:
+        st.markdown(f'<img src="data:image/png;base64,{logo2_b64}" class="logo-img">', unsafe_allow_html=True)
+with col_logo3:
+    if logo3_b64:
+        st.markdown(f'<img src="data:image/png;base64,{logo3_b64}" class="logo-img">', unsafe_allow_html=True)
+st.markdown("---", unsafe_allow_html=True)
 
-selected_page = option_menu(
-    menu_title=None,
-    options=["Minha Biblioteca", "Pergamum", "Repositório Institucional"],
-    icons=["book-half", "bank", "folder2-open"],
-    orientation="horizontal",
-    # Estilos do menu voltaram a ser otimizados para tema claro
-    styles={
-        "container": {"padding": "0!important", "background-color": "#fafafa", "border-radius": "10px"},
-        "icon": {"color": "#1f4e79", "font-size": "20px"},
-        "nav-link": {
-            "font-size": "16px",
-            "text-align": "center",
-            "margin": "0px",
-            "--hover-color": "#eee",
-        },
-        "nav-link-selected": {"background-color": "#1f4e79"},
-    }
-)
+# Lógica condicional para renderizar o dashboard ou mensagens
+if selected_page == "Minha Biblioteca":
+    if df_filtrado is not None and not df_filtrado.empty:
+        # KPIs
+        kpi_cols = st.columns(4)
+        with kpi_cols[0]:
+            st.markdown(f"""<div class="kpi-card"><h3>📚 Total de Livros</h3><h2>{df_filtrado['Titulo do Livro'].nunique()}</h2></div>""", unsafe_allow_html=True)
+        with kpi_cols[1]:
+            st.markdown(f"""<div class="kpi-card"><h3>👁️ Total de Visualizações</h3><h2>{df_filtrado['Total'].sum():,}</h2></div>""", unsafe_allow_html=True)
+        with kpi_cols[2]:
+            st.markdown(f"""<div class="kpi-card"><h3>🏫 Unidades</h3><h2>{df_filtrado['Unidade'].nunique()}</h2></div>""", unsafe_allow_html=True)
+        with kpi_cols[3]:
+            st.markdown(f"""<div class="kpi-card"><h3>🎓 Cursos</h3><h2>{df_filtrado['Curso'].nunique()}</h2></div>""", unsafe_allow_html=True)
 
-if selected_page == "Minha Biblioteca": render_minha_biblioteca()
-elif selected_page == "Pergamum": render_pergamum()
-elif selected_page == "Repositório Institucional": render_repositorio()
+        st.markdown("<br>", unsafe_allow_html=True)
 
-# --- FIM DO CÓDIGO ---
+        # Gráficos em Colunas
+        graph_cols = st.columns(2)
+        with graph_cols[0]:
+            with st.container():
+                st.markdown('<div class="card-container">', unsafe_allow_html=True)
+                st.subheader("📊 Top 10 Unidades por Visualização")
+                df_unidade = df_filtrado.groupby('Unidade')['Total'].sum().nlargest(10).reset_index()
+                fig = px.bar(df_unidade, x='Total', y='Unidade', orientation='h', text='Total', color_discrete_sequence=['#4C88E8'])
+                fig.update_layout(yaxis={'categoryorder':'total ascending'}, yaxis_title=None, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#E5E7EB')
+                st.plotly_chart(fig, use_container_width=True)
+                st.markdown('</div>', unsafe_allow_html=True)
+        
+        with graph_cols[1]:
+            with st.container():
+                st.markdown('<div class="card-container">', unsafe_allow_html=True)
+                st.subheader("🎯 Top 10 Cursos por Visualização")
+                df_curso = df_filtrado.groupby('Curso')['Total'].sum().nlargest(10).reset_index()
+                fig = px.pie(df_curso, values='Total', names='Curso', hole=0.5, color_discrete_sequence=px.colors.sequential.Blues_r)
+                fig.update_layout(legend_title_text='Cursos', paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#E5E7EB')
+                st.plotly_chart(fig, use_container_width=True)
+                st.markdown('</div>', unsafe_allow_html=True)
+
+        # Gráfico Treemap
+        with st.container():
+            st.markdown('<div class="card-container">', unsafe_allow_html=True)
+            st.subheader("🗺️ Mapa de Visualizações (Unidade > Curso)")
+            fig_treemap = px.treemap(df_filtrado, path=[px.Constant("Todas as Unidades"), 'Unidade', 'Curso'], values='Total',
+                                     color='Curso', hover_data=['Total'],
+                                     color_discrete_sequence=px.colors.qualitative.Pastel)
+            fig_treemap.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#E5E7EB')
+            st.plotly_chart(fig_treemap, use_container_width=True)
+            st.markdown('</div>', unsafe_allow_html=True)
+        
+        # Gráfico de Livros
+        with st.container():
+            st.markdown('<div class="card-container">', unsafe_allow_html=True)
+            st.subheader("📖 Livros Mais Visualizados")
+            top_n = st.number_input("Selecione o número de livros para exibir no ranking:", min_value=5, max_value=50, value=15, step=5)
+            df_livros = df_filtrado.groupby(['Titulo do Livro'])['Total'].sum().nlargest(top_n).reset_index()
+            fig = px.bar(df_livros, x='Total', y='Titulo do Livro', orientation='h', color='Total', color_continuous_scale='Blues')
+            fig.update_layout(height=max(400, top_n * 25), yaxis={'categoryorder':'total ascending'}, yaxis_title=None, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color='#E5E7EB')
+            st.plotly_chart(fig, use_container_width=True)
+            st.markdown('</div>', unsafe_allow_html=True)
+
+        # Tabela Interativa
+        with st.container():
+            st.markdown('<div class="card-container">', unsafe_allow_html=True)
+            st.subheader("🔍 Dados Detalhados (Tabela Interativa)")
+            df_tabela = df_filtrado[['Titulo do Livro', 'Curso', 'Unidade', 'Total']].sort_values('Total', ascending=False)
+            st.dataframe(df_tabela.reset_index(drop=True), use_container_width=True)
+            st.markdown('</div>', unsafe_allow_html=True)
+
+    elif df is None:
+        pass
+    else:
+        st.warning("Nenhum dado encontrado com os filtros aplicados. Tente ajustar os filtros na barra lateral.")
+
+elif selected_page in ["Pergamum", "Repositório Institucional"]:
+    st.info("🚧 Página em construção. Em breve, novos insights estarão disponíveis aqui!")
