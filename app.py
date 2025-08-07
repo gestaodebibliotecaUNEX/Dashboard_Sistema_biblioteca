@@ -232,3 +232,5 @@ selected_page = option_menu(
 if selected_page == "Minha Biblioteca": render_minha_biblioteca()
 elif selected_page == "Pergamum": render_pergamum()
 elif selected_page == "Repositório Institucional": render_repositorio()
+
+# --- FIM DO CÓDIGO ---
