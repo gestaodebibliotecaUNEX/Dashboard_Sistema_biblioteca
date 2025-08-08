@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import base64
+from datetime import datetime
 
 # --- CONFIGURAÇÃO INICIAL DA PÁGINA ---
 st.set_page_config(
@@ -10,7 +11,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- CSS PARA ESTILIZAÇÃO (TEMA AZUL ESCURO SIMILAR AO DASHBOARD UFC) ---
+# --- CSS PARA ESTILIZAÇÃO ---
 def load_css():
     st.markdown("""
     <style>
@@ -18,58 +19,20 @@ def load_css():
             padding-top: 1rem !important;
             padding-bottom: 2rem !important;
         }
-
-        /* --- TEMA AZUL ESCURO SIMILAR AO DASHBOARD UFC --- */
         body, .main, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {
             background-color: #1B263B !important;
             color: #FFFFFF !important;
         }
-
-        /* Barra Lateral com fundo azul similar ao UFC */
         [data-testid="stSidebar"] {
             background-color: #0D1B2A !important;
             border-right: 2px solid #415A77 !important;
         }
-        
-        /* Texto da Barra Lateral */
-        [data-testid="stSidebar"] h1, 
-        [data-testid="stSidebar"] h2, 
-        [data-testid="stSidebar"] h3,
-        [data-testid="stSidebar"] .st-emotion-cache-1b0udgb,
-        [data-testid="stSidebar"] label,
+        [data-testid="stSidebar"] h1, [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3,
+        [data-testid="stSidebar"] .st-emotion-cache-1b0udgb, [data-testid="stSidebar"] label,
         [data-testid="stSidebar"] .st-caption {
              color: #FFFFFF !important;
         }
-
-        /* Estilo dos botões de navegação similar ao UFC */
-        .nav-button {
-            background-color: #415A77 !important;
-            color: #FFFFFF !important;
-            border: 1px solid #778DA9 !important;
-            border-radius: 5px !important;
-            padding: 12px 20px !important;
-            margin: 5px 0 !important;
-            width: 100% !important;
-            text-align: center !important;
-            font-weight: 600 !important;
-            cursor: pointer !important;
-            transition: all 0.3s ease !important;
-        }
-        
-        .nav-button:hover {
-            background-color: #778DA9 !important;
-            transform: translateY(-2px) !important;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.3) !important;
-        }
-        
-        .nav-button.active {
-            background-color: #90E0EF !important;
-            color: #0D1B2A !important;
-            border-color: #90E0EF !important;
-        }
-
-        /* Containers e Cartões */
-        .card-container, .kpi-card {
+        .card-container, .kpi-card, .dashboard-card {
             background-color: #415A77 !important;
             border-radius: 8px !important;
             padding: 1.5rem !important;
@@ -77,56 +40,37 @@ def load_css():
             border: 1px solid #778DA9 !important;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1) !important;
         }
-
-        .kpi-card h3 { 
-            font-size: 1rem !important; 
-            color: #E0E1DD !important; 
-            font-weight: 600 !important; 
-            margin: 0 !important; 
+        
+        .dashboard-card {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
         }
-        .kpi-card h2 { 
-            font-size: 2.25rem !important; 
-            color: #FFFFFF !important; 
-            font-weight: 700 !important; 
-            margin: 0 !important; 
+        .dashboard-card-content {
+            flex-grow: 1; 
         }
 
-        .logo-img { 
-            height: 45px !important; 
-            object-fit: contain !important; 
-            background-color: #FFFFFF !important; 
-            border-radius: 8px !important; 
-            padding: 5px !important; 
-            box-shadow: 0 2px 4px rgba(0,0,0,0.5) !important; 
-        }
+        .kpi-card h3 { font-size: 1rem !important; color: #E0E1DD !important; font-weight: 600 !important; margin: 0 !important; }
+        .kpi-card h2 { font-size: 2.25rem !important; color: #FFFFFF !important; font-weight: 700 !important; margin: 0 !important; }
+        .logo-img { height: 45px !important; object-fit: contain !important; background-color: #FFFFFF !important;
+            border-radius: 8px !important; padding: 5px !important; box-shadow: 0 2px 4px rgba(0,0,0,0.5) !important; }
+        .contact-info { background-color: #0D1B2A !important; padding: 15px !important; border-radius: 8px !important;
+            margin-top: 20px !important; border: 1px solid #415A77 !important; }
+        .contact-info h4 { color: #90E0EF !important; margin-bottom: 10px !important; }
+        .contact-info p { color: #E0E1DD !important; margin: 5px 0 !important; }
+        .dashboard-card h3 { color: #FFFFFF; margin-bottom: 10px; font-size: 1.25rem; }
+        .dashboard-card p { color: #E0E1DD; font-size: 0.9rem; }
         
-        /* Título principal similar ao UFC */
-        .main-title {
-            font-size: 2.5rem !important;
-            font-weight: 700 !important;
-            color: #FFFFFF !important;
-            text-align: center !important;
-            margin-bottom: 2rem !important;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.5) !important;
+        .dashboard-card .stButton>button {
+            background-color: #90E0EF;
+            color: #0D1B2A;
+            width: 100%;
+            font-weight: bold;
+            margin-top: 1rem;
         }
-        
-        /* Informações de contato similar ao UFC */
-        .contact-info {
-            background-color: #0D1B2A !important;
-            padding: 15px !important;
-            border-radius: 8px !important;
-            margin-top: 20px !important;
-            border: 1px solid #415A77 !important;
-        }
-        
-        .contact-info h4 {
-            color: #90E0EF !important;
-            margin-bottom: 10px !important;
-        }
-        
-        .contact-info p {
-            color: #E0E1DD !important;
-            margin: 5px 0 !important;
+        .dashboard-card .stButton>button:hover {
+            background-color: #caf0f8;
+            color: #0D1B2A;
         }
     </style>
     """, unsafe_allow_html=True)
@@ -154,26 +98,14 @@ def load_data():
         return df
     except FileNotFoundError:
         st.error(f"Ficheiro de dados '{file_path}' não encontrado!", icon="🚨")
-        st.warning(f"**Por favor, certifique-se de que o ficheiro `{file_path}` está na mesma pasta que o seu script `app.py`.**")
         return None
     except Exception as e:
         st.error(f"Erro ao carregar os dados: {e}")
         return None
 
-# --- ESTRUTURA PRINCIPAL DO APP ---
-
-df = load_data()
-
-# COR DA FONTE PARA OS GRÁFICOS (CLARA)
-FONT_COLOR_GRAPHS = "#E0E1DD"
-
-# --- NAVEGAÇÃO LATERAL SIMILAR AO DASHBOARD UFC ---
-# O título principal foi removido da barra lateral.
-st.sidebar.markdown("---")
-
-# Opções de navegação similar ao dashboard UFC
+# --- ESTRUTURA DE DADOS E NAVEGAÇÃO ---
 navigation_options = [
-    ("📚 Minha Biblioteca", "minha_biblioteca"),
+    ("🏠 Painel de Controle", "inicio"),
     ("💾 Acervo Digital", "acervo_digital"),
     ("📖 Acervo Físico", "acervo_fisico"),
     ("📊 Avaliações MEC", "avaliacoes_mec"),
@@ -183,53 +115,98 @@ navigation_options = [
     ("👤 Pessoas", "pessoas")
 ]
 
-# Inicializar estado da sessão
-if 'selected_page' not in st.session_state:
-    st.session_state.selected_page = 'minha_biblioteca'
+all_dashboards = {
+    'minha_biblioteca':     ("📚 Dashboard Minha Biblioteca",     "Análise de uso da plataforma Minha Biblioteca por curso e unidade.", 'acervo_digital'),
+    'pergamum':             ('🔗 Dashboard Pergamum',            'Análise de dados de uso do sistema Pergamum, como empréstimos, devoluções e renovações.', 'acervo_digital'),
+    'ebsco':                ('🔗 Dashboard EBSCO',               'Análise de dados de acesso, downloads e pesquisas realizadas na plataforma EBSCO.', 'acervo_digital'),
+    'uptodate':             ('🔗 Dashboard UpToDate',            'Análise de dados de uso e principais consultas realizadas na plataforma UpToDate.', 'acervo_digital'),
+    'busca_integrada':      ('🔗 Dashboard Busca Integrada',     'Análise dos termos mais buscados e fontes mais acessadas através da Busca Integrada.', 'acervo_digital'),
+    'emprestimos_gerais':   ('📈 Dashboard Empréstimos',         'Visão geral de empréstimos, devoluções e itens mais populares do acervo físico.', 'acervo_fisico'),
+    'inventario':           ('📦 Dashboard Inventário',          'Acompanhamento do inventário do acervo físico e status dos materiais.', 'acervo_fisico'),
+    'indicadores_mec':      ('📝 Dashboard Indicadores MEC',     'Painel com os principais indicadores de acervo e uso exigidos pelo MEC.', 'avaliacoes_mec'),
+}
 
-# Criar botões de navegação
+if 'selected_page' not in st.session_state:
+    st.session_state.selected_page = 'inicio'
+
+def set_page(page_key):
+    st.session_state.selected_page = page_key
+
+# --- BARRA LATERAL ---
 st.sidebar.markdown("### Navegação")
 for option_name, option_key in navigation_options:
-    if st.sidebar.button(option_name, key=option_key, use_container_width=True):
-        st.session_state.selected_page = option_key
+    if st.sidebar.button(option_name, key=f"sidebar_{option_key}", use_container_width=True):
+        set_page(option_key)
+        st.rerun()
 
-# Informações de contato similar ao UFC
-st.sidebar.markdown("""
+st.sidebar.markdown(f"""
 <div class="contact-info">
     <h4>Para maiores informações:</h4>
-    <p>📧 biblioteca@instituicao.edu.br</p>
-    <p>📞 (85) 3366-9507</p>
-    <p>🌐 https://biblioteca.instituicao.edu.br</p>
-    <p><strong>Última atualização:</strong> 07/08/2025</p>
+    <p>📧 gestaodebiblioteca@unex.edu.br</p>
+    <p>🌐 https://www.uniftc.edu.br/servicos/biblioteca</p>
+    <p><strong>Última atualização:</strong> {datetime.now().strftime('%d/%m/%Y')}</p>
 </div>
 """, unsafe_allow_html=True)
 
-# --- CABEÇALHO COM LOGOS ---
+# --- CABEÇALHO ---
 logo1_b64 = get_base64_of_bin_file("image.png")
 logo2_b64 = get_base64_of_bin_file("logo.png")
 logo3_b64 = get_base64_of_bin_file("UNEX-LOGO.png")
-
-# O layout das colunas é mantido, mas o texto do título é alterado.
 col_title, col_logo1, col_logo2, col_logo3 = st.columns([0.55, 0.15, 0.15, 0.15])
 with col_title:
-    # O título dinâmico foi substituído pelo título principal solicitado.
     st.markdown('<h1 style="font-size: 2.1rem; color: #FFFFFF; font-weight: 700;">PAINÉIS DO SISTEMA DE BIBLIOTECA UNIFTC/UNEX</h1>', unsafe_allow_html=True)
-
-# As logos permanecem nos mesmos lugares.
 with col_logo1:
     if logo1_b64: st.markdown(f'<img src="data:image/png;base64,{logo1_b64}" class="logo-img">', unsafe_allow_html=True)
 with col_logo2:
     if logo2_b64: st.markdown(f'<img src="data:image/png;base64,{logo2_b64}" class="logo-img">', unsafe_allow_html=True)
 with col_logo3:
     if logo3_b64: st.markdown(f'<img src="data:image/png;base64,{logo3_b64}" class="logo-img">', unsafe_allow_html=True)
-
 st.markdown("---", unsafe_allow_html=True)
 
-# --- CONTEÚDO DAS PÁGINAS ---
-if st.session_state.selected_page == "minha_biblioteca":
+
+# --- FUNÇÃO PARA GERAR PÁGINAS DE HUB (CORRIGE O NameError) ---
+def render_hub_page(page_key, page_name):
+    st.header(page_name)
+    st.markdown(f"Explore os dashboards disponíveis na seção **{page_name.split(' ', 1)[1]}**.")
+    st.markdown("<br>", unsafe_allow_html=True)
+    dash_items = {key: val for key, val in all_dashboards.items() if val[2] == page_key}
+
+    if not dash_items:
+        st.info("Nenhum dashboard foi configurado para esta seção ainda. Em breve, novos painéis estarão disponíveis aqui!", icon="🛠️")
+        return
+
+    num_cols = 3
+    grouped_items = [list(dash_items.items())[i:i + num_cols] for i in range(0, len(dash_items), num_cols)]
+
+    for row in grouped_items:
+        cols = st.columns(num_cols)
+        for i, (key, (title, desc, _)) in enumerate(row):
+            with cols[i]:
+                st.markdown(f"""
+                <div class="dashboard-card">
+                    <div class="dashboard-card-content">
+                        <h3>{title}</h3>
+                        <p>{desc}</p>
+                    </div>
+                </div>""", unsafe_allow_html=True)
+                if st.button("Acessar Dashboard", key=f"btn_{key}"):
+                    set_page(key)
+                    st.rerun()
+
+# --- ROTEAMENTO DE PÁGINAS ---
+current_page_key = st.session_state.selected_page
+
+if current_page_key == 'inicio':
+    st.subheader("Bem-vindo ao Sistema de Bibliotecas")
+    st.markdown("Use o menu à esquerda para navegar entre as diferentes seções e explorar os dashboards de análise de dados.")
+    st.image("Biblioteca.jpg", use_container_width=True)
+
+elif current_page_key == 'minha_biblioteca':
+    FONT_COLOR_GRAPHS = "#E0E1DD"
+    df = load_data()
     if df is not None:
         st.sidebar.markdown("---")
-        st.sidebar.header("🔍 Filtros Interativos")
+        st.sidebar.header("🔍 Filtros (Minha Biblioteca)")
         
         unidades = ['Todas'] + sorted(df['Unidade'].unique().tolist())
         unidade_selecionada = st.sidebar.selectbox("Selecione a Unidade:", unidades)
@@ -286,13 +263,11 @@ if st.session_state.selected_page == "minha_biblioteca":
                     st.plotly_chart(fig, use_container_width=True)
                     st.markdown('</div>', unsafe_allow_html=True)
             
-            # --- GRÁFICO DE DISPERSÃO ---
             with st.container(border=False):
                 st.markdown('<div class="card-container">', unsafe_allow_html=True)
                 st.subheader("📦 Dispersão de Visualizações por Unidade")
                 top_unidades_list = df_filtrado['Unidade'].value_counts().nlargest(10).index
                 df_boxplot = df_filtrado[df_filtrado['Unidade'].isin(top_unidades_list)]
-                
                 fig_box = px.box(df_boxplot, x='Unidade', y='Total', color='Unidade',
                                  labels={'Total': 'Total de Visualizações', 'Unidade': 'Unidade'},
                                  color_discrete_sequence=px.colors.qualitative.Pastel)
@@ -328,25 +303,20 @@ if st.session_state.selected_page == "minha_biblioteca":
         else:
             st.warning("Nenhum dado encontrado com os filtros aplicados. Tente ajustar as opções na barra lateral.")
     else:
-        pass
+        # CORREÇÃO DO SyntaxError: Parêntese de fechamento adicionado.
+        st.error("Não foi possível carregar os dados para exibir o dashboard 'Minha Biblioteca'.")
 
 else:
-    # Páginas em construção
-    st.markdown('<div class="card-container">', unsafe_allow_html=True)
-    st.info("🚧 Página em construção. Em breve, novos insights estarão disponíveis aqui!", icon="🛠️")
+    is_hub_page = any(current_page_key == nav_key for _, nav_key in navigation_options if nav_key != 'inicio')
     
-    # Adicionar algumas informações específicas para cada seção
-    page_descriptions = {
-        'acervo_digital': "Esta seção apresentará análises detalhadas do acervo digital da biblioteca, incluindo estatísticas de acesso, downloads e utilização de recursos eletrônicos.",
-        'acervo_fisico': "Aqui você encontrará informações sobre o acervo físico, incluindo estatísticas de empréstimos, renovações e disponibilidade de materiais.",
-        'avaliacoes_mec': "Seção dedicada às avaliações do MEC, com indicadores de qualidade e conformidade dos serviços bibliotecários.",
-        'contratacoes': "Informações sobre contratações de serviços e aquisições para o sistema de bibliotecas.",
-        'educacao_usuarios': "Dados sobre programas de educação de usuários, treinamentos e capacitações oferecidas pela biblioteca.",
-        'infraestrutura': "Análises sobre a infraestrutura física e tecnológica do sistema de bibliotecas.",
-        'pessoas': "Informações sobre recursos humanos, equipe e gestão de pessoas no sistema de bibliotecas."
-    }
+    if is_hub_page:
+        page_name = [name for name, key in navigation_options if key == current_page_key][0]
+        render_hub_page(current_page_key, page_name)
     
-    if st.session_state.selected_page in page_descriptions:
-        st.markdown(f"**Descrição:** {page_descriptions[st.session_state.selected_page]}")
-    
-    st.markdown('</div>', unsafe_allow_html=True)
+    else:
+        title, desc, _ = all_dashboards.get(current_page_key, ("Painel Não Encontrado", "", ""))
+        st.markdown('<div class="card-container">', unsafe_allow_html=True)
+        st.header(f"🚧 {title} 🚧")
+        st.info("Este painel está em construção. Em breve, novos insights e funcionalidades estarão disponíveis aqui!", icon="🛠️")
+        st.markdown(f"**O que esperar deste dashboard:** {desc}")
+        st.markdown('</div>', unsafe_allow_html=True)
