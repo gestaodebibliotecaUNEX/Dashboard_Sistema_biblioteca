@@ -1,54 +1,62 @@
-# pages/minha_biblioteca.py
+ # pages/minha_biblioteca.py
 import streamlit as st
+import pandas as pd
 import plotly.express as px
 from utils import load_data
 from config import FONT_COLOR_GRAPHS
 
-def render_page():
-    """Renderiza a página do dashboard 'Minha Biblioteca'."""
-    df = load_data("assets/planilha_lyceum_e_minha_biblioteca.xlsx")
-    
-    if df is None:
-        st.error("Não foi possível carregar os dados para exibir o dashboard 'Minha Biblioteca'.")
-        return
-
-    # --- FILTROS NA BARRA LATERAL ---
-    st.sidebar.markdown("---")
-    st.sidebar.header("🔍 Filtros (Minha Biblioteca)")
-    
-    unidades = ['Todas'] + sorted(df['Unidade'].unique().tolist())
-    unidade_selecionada = st.sidebar.selectbox("Selecione a Unidade:", unidades)
-    
-    cursos_options = df['Curso'].unique()
-    if unidade_selecionada != 'Todas':
-        cursos_options = df[df['Unidade'] == unidade_selecionada]['Curso'].unique()
-    
-    cursos = ['Todos'] + sorted(cursos_options.tolist())
-    curso_selecionado = st.sidebar.selectbox("Selecione o Curso:", cursos)
-    
-    termo_busca = st.sidebar.text_input("Buscar por Título do Livro:", placeholder="Ex: Anatomia")
-    
-    min_views = st.sidebar.slider(
-        "Nº mínimo de visualizações:", 
-        min_value=0, max_value=int(df['Total'].max()), value=0, step=10
-    )
-
-    # --- APLICAÇÃO DOS FILTROS ---
+# --- NOVA FUNÇÃO DE CÁLCULO COM CACHE ---
+@st.cache_data
+def filtrar_dados(df, unidade, curso, termo_busca, min_views):
+    """Aplica todos os filtros ao DataFrame e retorna o resultado."""
     df_filtrado = df.copy()
-    if unidade_selecionada != 'Todas':
-        df_filtrado = df_filtrado[df_filtrado['Unidade'] == unidade_selecionada]
-    if curso_selecionado != 'Todos':
-        df_filtrado = df_filtrado[df_filtrado['Curso'] == curso_selecionado]
+    if unidade != 'Todas':
+        df_filtrado = df_filtrado[df_filtrado['Unidade'] == unidade]
+    if curso != 'Todos':
+        df_filtrado = df_filtrado[df_filtrado['Curso'] == curso]
     if termo_busca:
         df_filtrado = df_filtrado[df_filtrado['Titulo do Livro'].str.contains(termo_busca, case=False, na=False)]
     if min_views > 0:
         df_filtrado = df_filtrado[df_filtrado['Total'] >= min_views]
+    return df_filtrado
 
-    # --- RENDERIZAÇÃO DO CONTEÚDO DA PÁGINA ---
+# --- FUNÇÃO PRINCIPAL REESCRITA ---
+def render_page():
+    """Renderiza a página do dashboard 'Minha Biblioteca' de forma otimizada."""
+    df_original = load_data()
+    
+    if df_original is None:
+        st.error("Não foi possível carregar os dados para exibir o dashboard 'Minha Biblioteca'.")
+        return
+
+    # --- FILTROS NA BARRA LATERAL (sem alterações na aparência) ---
+    st.sidebar.markdown("---")
+    st.sidebar.header("🔍 Filtros (Minha Biblioteca)")
+    
+    unidades = ['Todas'] + sorted(df_original['Unidade'].unique().tolist())
+    unidade_selecionada = st.sidebar.selectbox("Selecione a Unidade:", unidades)
+    
+    # Os filtros de curso agora dependem da unidade selecionada
+    cursos_no_df = df_original
+    if unidade_selecionada != 'Todas':
+        cursos_no_df = df_original[df_original['Unidade'] == unidade_selecionada]
+    
+    cursos = ['Todos'] + sorted(cursos_no_df['Curso'].unique().tolist())
+    curso_selecionado = st.sidebar.selectbox("Selecione o Curso:", cursos)
+    
+    termo_busca = st.sidebar.text_input("Buscar por Título do Livro:", placeholder="Ex: Anatomia")
+    min_views = st.sidebar.slider("Nº mínimo de visualizações:", min_value=0, max_value=int(df_original['Total'].max()), value=0, step=10)
+
+    # --- CHAMADA À FUNÇÃO DE FILTRO COM CACHE ---
+    # O Streamlit só vai re-executar esta função se um dos argumentos mudar.
+    df_filtrado = filtrar_dados(df_original, unidade_selecionada, curso_selecionado, termo_busca, min_views)
+
+    # --- RENDERIZAÇÃO DO CONTEÚDO DA PÁGINA (sem alterações na lógica) ---
     if df_filtrado.empty:
         st.warning("Nenhum dado encontrado com os filtros aplicados. Tente ajustar as opções na barra lateral.")
         return
 
+    # O resto do código para renderizar KPIs e gráficos continua exatamente o mesmo...
     # KPIs
     kpi_cols = st.columns(4)
     with kpi_cols[0]: st.markdown(f"""<div class="kpi-card"><h3>📚 Livros Filtrados</h3><h2>{df_filtrado['Titulo do Livro'].nunique()}</h2></div>""", unsafe_allow_html=True)
@@ -57,6 +65,7 @@ def render_page():
     with kpi_cols[3]: st.markdown(f"""<div class="kpi-card"><h3>🎓 Cursos</h3><h2>{df_filtrado['Curso'].nunique()}</h2></div>""", unsafe_allow_html=True)
     st.markdown("<br>", unsafe_allow_html=True)
     
+    # Gráficos... (todo o seu código de gráficos vem aqui, sem alterações)
     # Gráficos em colunas
     graph_cols = st.columns(2)
     with graph_cols[0], st.container(border=False):
